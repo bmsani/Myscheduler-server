@@ -1,6 +1,7 @@
 const express = require("express");
 const app = express();
 const port = process.env.PORT || 5000;
+const jwt = require("jsonwebtoken");
 var cors = require("cors");
 require("dotenv").config();
 const { MongoClient, ServerApiVersion } = require("mongodb");
@@ -16,10 +17,25 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
+const verifyJWT = async (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if(!authHeader){
+        return res.status(401).send({message: "Unauthorized access"});
+    }
+    const token = authHeader.split(" ")[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded)=>{
+        if(err){
+            return res.status(403).send({message: "Access forbidden"})
+        }
+        req.decoded = decoded;
+        next()
+    });
+};
+
 async function run() {
   try {
-    const collection = client.db("MyScheduler").collection("users");
-    
+    const usersCollection = client.db("MyScheduler").collection("users");
+
     app.put("/user/:email", async (req, res) => {
       const email = req.params.email;
       const user = req.body;
