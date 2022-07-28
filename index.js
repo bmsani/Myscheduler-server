@@ -34,6 +34,8 @@ const verifyJWT = async (req, res, next) => {
 
 async function run() {
   try {
+    await client.connect();
+    
     const usersCollection = client.db("MyScheduler").collection("users");
 
     app.put("/user/:email", async (req, res) => {
