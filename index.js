@@ -38,6 +38,22 @@ async function run() {
     
     const usersCollection = client.db("MyScheduler").collection("users");
 
+    app.put("/brandLogo/:email", verifyJWT, async (req, res)=>{
+      const email = req.params.email;
+      const brandLogo = req.body;
+      const filter = { email: email };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: brandLogo,
+      };
+      const result = await usersCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result)
+    })
+
     app.put("/user/:email", async (req, res) => {
       const email = req.params.email;
       const user = req.body;
