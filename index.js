@@ -18,29 +18,57 @@ const client = new MongoClient(uri, {
 });
 
 const verifyJWT = async (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if(!authHeader){
-        return res.status(401).send({message: "Unauthorized access"});
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send({ message: "Unauthorized access" });
+  }
+  const token = authHeader.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(403).send({ message: "Access forbidden" })
     }
-    const token = authHeader.split(" ")[1];
-    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded)=>{
-        if(err){
-            return res.status(403).send({message: "Access forbidden"})
-        }
-        req.decoded = decoded;
-        next()
-    });
+    req.decoded = decoded;
+    next()
+  });
 };
 
 async function run() {
   try {
     await client.connect();
-    
+
     const usersCollection = client.db("MyScheduler").collection("users");
+    app.get('/user/:email', verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const user = await usersCollection.findOne(filter);
+      res.send(user);
+    })
+
+    app.put('/updatedUser/:email', verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const { name, message, mobile } = req.body
+      const filter = { email: email };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          name: name,
+          message: message,
+          mobile: mobile
+        },
+      }
+      const result = await usersCollection.updateOne(filter, updateDoc, options);
+      res.send(result);
+    })
+
+
+
+
+
 
     app.put("/user/:email", async (req, res) => {
       const email = req.params.email;
       const user = req.body;
+      console.log(user);
       const filter = { email: email };
       const options = { upsert: true };
       const updatedDoc = {
@@ -58,7 +86,11 @@ async function run() {
       );
       res.send({ result, token });
     });
-  } finally {
+
+
+  }
+
+  finally {
     // await client.close();
   }
 }
