@@ -4,7 +4,7 @@ const port = process.env.PORT || 5000;
 const jwt = require("jsonwebtoken");
 var cors = require("cors");
 require("dotenv").config();
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 // Middle ware
 app.use(cors());
@@ -25,10 +25,10 @@ const verifyJWT = async (req, res, next) => {
   const token = authHeader.split(" ")[1];
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
     if (err) {
-      return res.status(403).send({ message: "Access forbidden" })
+      return res.status(403).send({ message: "Access forbidden" });
     }
     req.decoded = decoded;
-    next()
+    next();
   });
 };
 
@@ -37,35 +37,36 @@ async function run() {
     await client.connect();
 
     const usersCollection = client.db("MyScheduler").collection("users");
-    app.get('/user/:email', verifyJWT, async (req, res) => {
+    const scheduleCollection = client.db("MyScheduler").collection("schedule");
+
+    app.get("/user/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       const user = await usersCollection.findOne(filter);
       res.send(user);
-    })
+    });
 
-    app.put('/updatedUser/:email', verifyJWT, async (req, res) => {
+    app.put("/updatedUser/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
-      const { name, message, mobile } = req.body
+      const { name, message, mobile } = req.body;
       const filter = { email: email };
       const options = { upsert: true };
       const updateDoc = {
         $set: {
           name: name,
           message: message,
-          mobile: mobile
+          mobile: mobile,
         },
-      }
-      const result = await usersCollection.updateOne(filter, updateDoc, options);
+      };
+      const result = await usersCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
       res.send(result);
-    })
+    });
 
-
-
-
-
-
-    app.put("/brandLogo/:email", verifyJWT, async (req, res)=>{
+    app.put("/brandLogo/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
       const brandLogo = req.body;
       const filter = { email: email };
@@ -78,8 +79,8 @@ async function run() {
         updatedDoc,
         options
       );
-      res.send(result)
-    })
+      res.send(result);
+    });
 
     app.put("/user/:email", async (req, res) => {
       const email = req.params.email;
@@ -103,10 +104,48 @@ async function run() {
       res.send({ result, token });
     });
 
+    // Scheduling Api section
 
-  }
+    app.get("/schedule/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const filter = { appointUser: email };
+      const result = await scheduleCollection.find(filter).toArray();
+      res.send(result);
+    });
 
-  finally {
+    app.post("/schedule/:email", async (req, res) => {
+      const data = req.body;
+      const result = await scheduleCollection.insertOne(data);
+      res.send(result);
+    });
+
+    app.patch("/updateSchedule/:id", async (req, res) => {
+      const id = req.params.id;
+      const { appointDay, appointName, appointTime } = req.body;
+      const filter = { _id: ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          appointDay: appointDay,
+          appointName: appointName,
+          appointTime: appointTime,
+        },
+      };
+      const result = await scheduleCollection.updateOne(
+        filter,
+        updatedDoc
+      );
+      res.send(result);
+    });
+
+    app.delete("/schedule/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await scheduleCollection.deleteOne(filter);
+      res.send(result);
+    });
+
+    // ///////////////////////////////////////////////////////////////////////////////
+  } finally {
     // await client.close();
   }
 }
