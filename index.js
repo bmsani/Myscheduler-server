@@ -4,7 +4,7 @@ const port = process.env.PORT || 5000;
 const jwt = require("jsonwebtoken");
 var cors = require("cors");
 require("dotenv").config();
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 // Middle ware
 app.use(cors());
@@ -25,10 +25,10 @@ const verifyJWT = async (req, res, next) => {
   const token = authHeader.split(" ")[1];
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
     if (err) {
-      return res.status(403).send({ message: "Access forbidden" })
+      return res.status(403).send({ message: "Access forbidden" });
     }
     req.decoded = decoded;
-    next()
+    next();
   });
 };
 
@@ -37,38 +37,73 @@ async function run() {
     await client.connect();
 
     const usersCollection = client.db("MyScheduler").collection("users");
+    const scheduleCollection = client.db("MyScheduler").collection("schedules");
+    const userAvailabilityCollection = client
+      .db("MyScheduler")
+      .collection("userAvailability");
+    const blogsCollection = client.db("MyScheduler").collection("blogs");
+
     app.get('/user/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       const user = await usersCollection.findOne(filter);
       res.send(user);
-    })
+    });
 
-    app.put('/updatedUser/:email', verifyJWT, async (req, res) => {
+    app.put("/updatedUser/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
-      const { name, message, mobile } = req.body
+      const { name, message, mobile } = req.body;
       const filter = { email: email };
       const options = { upsert: true };
       const updateDoc = {
         $set: {
           name: name,
           message: message,
-          mobile: mobile
+          mobile: mobile,
         },
-      }
-      const result = await usersCollection.updateOne(filter, updateDoc, options);
+      };
+      const result = await usersCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
       res.send(result);
     })
 
 
+    app.get('/blogs', async (req, res) => {
+      const query = {};
+      const cursor = blogsCollection.find(query);
+      const blogs = await cursor.toArray();
+      res.send(blogs);
 
+    })
+    app.get('/blogs/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await blogsCollection.findOne(query);
+      res.send(result);
+    })
 
-
+    app.put("/brandLogo/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const brandLogo = req.body;
+      const filter = { email: email };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: brandLogo,
+      };
+      const result = await usersCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result);
+    });
 
     app.put("/user/:email", async (req, res) => {
       const email = req.params.email;
       const user = req.body;
-      console.log(user);
       const filter = { email: email };
       const options = { upsert: true };
       const updatedDoc = {
@@ -87,10 +122,66 @@ async function run() {
       res.send({ result, token });
     });
 
+    //  Availability Api section //////////////////////////////////////////////////
 
-  }
+    app.get("/availability/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const result = await userAvailabilityCollection.findOne(filter);
+      res.send(result);
+    });
 
-  finally {
+    app.put("/userAvailability/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const availability = req.body;
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: availability,
+      };
+      const result = await userAvailabilityCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      res.send(result);
+    });
+
+    app.put("/availability/checked/:id", verifyJWT, async (req, res) => {
+      const email = req.query.email;
+      if (req.decoded.email !== email) {
+        return res.status(403).send({ message: "Access forbidden" });
+      }
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const find = await userAvailabilityCollection.findOne(filter);
+      const dayId = req.query.dayDataId;
+      const dayData = find.dayData.find((day) => day.id === dayId);
+      if (req.query.dayStatus === "false") {
+        dayData.checked = false;
+      } else if (req.query.dayStatus === "true") {
+        dayData.checked = true;
+      }
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: find,
+      };
+      const result = await userAvailabilityCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      res.send(result);
+    });
+
+    // Demo project ///////////////////////////////////////////
+    app.get("/availability", async (req, res) => {
+      const result = await scheduleCollection.find().toArray();
+      res.send(result);
+    });
+
+    // / ///////////////////////////////////////////////////////////  //
+  } finally {
     // await client.close();
   }
 }
