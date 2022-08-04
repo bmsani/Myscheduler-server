@@ -37,9 +37,10 @@ async function run() {
     await client.connect();
 
     const usersCollection = client.db("MyScheduler").collection("users");
+    const blogsCollection = client.db("MyScheduler").collection("blogs");
     const scheduleCollection = client.db("MyScheduler").collection("schedule");
 
-    app.get("/user/:email", verifyJWT, async (req, res) => {
+    app.get('/user/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       const user = await usersCollection.findOne(filter);
@@ -64,7 +65,22 @@ async function run() {
         options
       );
       res.send(result);
-    });
+    })
+
+
+    app.get('/blogs', async (req, res) => {
+      const query = {};
+      const cursor = blogsCollection.find(query);
+      const blogs = await cursor.toArray();
+      res.send(blogs);
+
+    })
+    app.get('/blogs/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await blogsCollection.findOne(query);
+      res.send(result);
+    })
 
     app.put("/brandLogo/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
