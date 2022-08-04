@@ -41,8 +41,9 @@ async function run() {
     const userAvailabilityCollection = client
       .db("MyScheduler")
       .collection("userAvailability");
+    const blogsCollection = client.db("MyScheduler").collection("blogs");
 
-    app.get("/user/:email", verifyJWT, async (req, res) => {
+    app.get('/user/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       const user = await usersCollection.findOne(filter);
@@ -67,7 +68,22 @@ async function run() {
         options
       );
       res.send(result);
-    });
+    })
+
+
+    app.get('/blogs', async (req, res) => {
+      const query = {};
+      const cursor = blogsCollection.find(query);
+      const blogs = await cursor.toArray();
+      res.send(blogs);
+
+    })
+    app.get('/blogs/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await blogsCollection.findOne(query);
+      res.send(result);
+    })
 
     app.put("/brandLogo/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
@@ -131,36 +147,8 @@ async function run() {
       res.send(result);
     });
 
-    // app.put("/availability/checked/:id", async (req, res) => {
-    //   const daysId = req.params.id;
-    //   const { newDay, dataId } = req.body;
-    //   const { id, day, start, end, checked, interval } = newDay;
-    //   const filter = { _id: ObjectId(dataId) };
-    //   const findData = await userAvailabilityCollection.findOne(filter);
-    //   const checkedChange = findData.dayData.find((d) => d.id === daysId);
-    //   const options = { upsert: true };
-    //   const updateDoc = {
-    //     $set: {
-    //       id: id,
-    //       day: day,
-    //       start: start,
-    //       end: end,
-    //       checked: checked,
-    //       interval: interval,
-    //     },
-    //   };
-    //   const result = await userAvailabilityCollection.updateOne(
-    //     options,
-    //     updateDoc,
-    //     checkedChange
-    //   );
-    //   console.log(result);
-    // });
-
     app.put("/availability/checked/:id", verifyJWT, async (req, res) => {
-      console.log(req.decoded.email);
       const email = req.query.email;
-      console.log(email);
       if (req.decoded.email !== email) {
         return res.status(403).send({ message: "Access forbidden" });
       }
