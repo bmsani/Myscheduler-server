@@ -37,7 +37,10 @@ async function run() {
     await client.connect();
 
     const usersCollection = client.db("MyScheduler").collection("users");
-    const scheduleCollection = client.db("MyScheduler").collection("schedule");
+    const scheduleCollection = client.db("MyScheduler").collection("schedules");
+    const userAvailabilityCollection = client
+      .db("MyScheduler")
+      .collection("userAvailability");
 
     app.get("/user/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
@@ -85,7 +88,6 @@ async function run() {
     app.put("/user/:email", async (req, res) => {
       const email = req.params.email;
       const user = req.body;
-      console.log(user);
       const filter = { email: email };
       const options = { upsert: true };
       const updatedDoc = {
@@ -104,47 +106,93 @@ async function run() {
       res.send({ result, token });
     });
 
-    // Scheduling Api section
+    //  Availability Api section //////////////////////////////////////////////////
 
-    app.get("/schedule/:email", verifyJWT, async (req, res) => {
+    app.get("/availability/:email", async (req, res) => {
       const email = req.params.email;
-      const filter = { appointUser: email };
-      const result = await scheduleCollection.find(filter).toArray();
+      const filter = { email: email };
+      const result = await userAvailabilityCollection.findOne(filter);
       res.send(result);
     });
 
-    app.post("/schedule/:email", async (req, res) => {
-      const data = req.body;
-      const result = await scheduleCollection.insertOne(data);
-      res.send(result);
-    });
-
-    app.patch("/updateSchedule/:id", async (req, res) => {
-      const id = req.params.id;
-      const { appointDay, appointName, appointTime } = req.body;
-      const filter = { _id: ObjectId(id) };
-      const updatedDoc = {
-        $set: {
-          appointDay: appointDay,
-          appointName: appointName,
-          appointTime: appointTime,
-        },
+    app.put("/userAvailability/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const availability = req.body;
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: availability,
       };
-      const result = await scheduleCollection.updateOne(
+      const result = await userAvailabilityCollection.updateOne(
         filter,
-        updatedDoc
+        updateDoc,
+        options
       );
       res.send(result);
     });
 
-    app.delete("/schedule/:id", async (req, res) => {
+    // app.put("/availability/checked/:id", async (req, res) => {
+    //   const daysId = req.params.id;
+    //   const { newDay, dataId } = req.body;
+    //   const { id, day, start, end, checked, interval } = newDay;
+    //   const filter = { _id: ObjectId(dataId) };
+    //   const findData = await userAvailabilityCollection.findOne(filter);
+    //   const checkedChange = findData.dayData.find((d) => d.id === daysId);
+    //   const options = { upsert: true };
+    //   const updateDoc = {
+    //     $set: {
+    //       id: id,
+    //       day: day,
+    //       start: start,
+    //       end: end,
+    //       checked: checked,
+    //       interval: interval,
+    //     },
+    //   };
+    //   const result = await userAvailabilityCollection.updateOne(
+    //     options,
+    //     updateDoc,
+    //     checkedChange
+    //   );
+    //   console.log(result);
+    // });
+
+    app.put("/availability/checked/:id", verifyJWT, async (req, res) => {
+      console.log(req.decoded.email);
+      const email = req.query.email;
+      console.log(email);
+      if (req.decoded.email !== email) {
+        return res.status(403).send({ message: "Access forbidden" });
+      }
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
-      const result = await scheduleCollection.deleteOne(filter);
+      const find = await userAvailabilityCollection.findOne(filter);
+      const dayId = req.query.dayDataId;
+      const dayData = find.dayData.find((day) => day.id === dayId);
+      if (req.query.dayStatus === "false") {
+        dayData.checked = false;
+      } else if (req.query.dayStatus === "true") {
+        dayData.checked = true;
+      }
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: find,
+      };
+      const result = await userAvailabilityCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
       res.send(result);
     });
 
-    // ///////////////////////////////////////////////////////////////////////////////
+    // Demo project ///////////////////////////////////////////
+    app.get("/availability", async (req, res) => {
+      const result = await scheduleCollection.find().toArray();
+      res.send(result);
+    });
+
+    // / ///////////////////////////////////////////////////////////  //
   } finally {
     // await client.close();
   }
