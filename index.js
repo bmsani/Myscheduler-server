@@ -47,7 +47,7 @@ async function run() {
       .collection("userAvailability");
     const blogsCollection = client.db("MyScheduler").collection("blogs");
 
-    app.get('/user/:email', verifyJWT, async (req, res) => {
+    app.get("/user/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       const user = await usersCollection.findOne(filter);
@@ -72,22 +72,20 @@ async function run() {
         options
       );
       res.send(result);
-    })
+    });
 
-
-    app.get('/blogs', async (req, res) => {
+    app.get("/blogs", async (req, res) => {
       const query = {};
       const cursor = blogsCollection.find(query);
       const blogs = await cursor.toArray();
       res.send(blogs);
-
-    })
-    app.get('/blogs/:id', async (req, res) => {
+    });
+    app.get("/blogs/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const result = await blogsCollection.findOne(query);
       res.send(result);
-    })
+    });
 
     app.put("/brandLogo/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
@@ -179,10 +177,39 @@ async function run() {
       res.send(result);
     });
 
-    // Demo project ///////////////////////////////////////////
-    app.get("/availability", async (req, res) => {
-      const result = await scheduleCollection.find().toArray();
+    app.get("/availability/:daysId/:dayId", async (req, res) => {
+      const daysId = req.params.daysId;
+      const query = { _id: ObjectId(daysId) };
+      const filter = await userAvailabilityCollection.findOne(query);
+      const dayId = req.params.dayId;
+      const result = filter.dayData.find((d) => d.id === dayId);
       res.send(result);
+    });
+
+    app.put("/editAvailability/:daysId/:dayId", async (req, res) => {
+      const daysId = req.params.daysId;
+      const filter = { _id: ObjectId(daysId) };
+      const find = await userAvailabilityCollection.findOne(filter);
+      const dayId = req.params.dayId;
+      const { newStart, newEnd } = req.body;
+      const dayData = find.dayData.find((d) => d.id === dayId);
+      // const { start, end } = dayData;
+      if (dayData.start !== newStart && dayData.end !== newEnd) {
+        (dayData.start = newStart), (dayData.end = newEnd);
+      } else if (dayData.start === newStart && dayData.end === newEnd) {
+        dayData.start = newStart;
+        dayData.end = newEnd;
+      }
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: find,
+      };
+      const result = await userAvailabilityCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result)
     });
 
     // / ///////////////////////////////////////////////////////////  //
