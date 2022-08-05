@@ -5,14 +5,10 @@ const jwt = require("jsonwebtoken");
 var cors = require("cors");
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-// const createError = require('http-errors');
-// const morgan = require('morgan');
 
 // Middle ware
 app.use(cors());
 app.use(express.json());
-// app.use(express.urlencoded({ extended: false }));
-// app.use(morgan('dev'));
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.y46qz7a.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
@@ -105,7 +101,6 @@ async function run() {
 
     app.put("/user/:email", async (req, res) => {
       const email = req.params.email;
-      console.log(email)
       const user = req.body;
       const filter = { email: email };
       const options = { upsert: true };
@@ -122,7 +117,7 @@ async function run() {
         process.env.ACCESS_TOKEN_SECRET,
         { expiresIn: "1d" }
       );
-      // res.send({ result, token });
+      res.send({ result, token });
     });
 
     //  Availability Api section //////////////////////////////////////////////////
@@ -222,21 +217,6 @@ run().catch(console.dir);
 app.get("/", (req, res) => {
   res.send("Hello World! from MyScheduler");
 });
-
-// for google calendar API
-// app.use('/api', require('./routes/api.route'));
-
-// app.use((req, res, next) => {
-//   next(createError.NotFound());
-// });
-
-// app.use((err, req, res, next) => {
-//   res.status(err.status || 500);
-//   res.send({
-//     status: err.status || 500,
-//     message: err.message,
-//   });
-// });
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
