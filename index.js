@@ -37,7 +37,9 @@ async function run() {
     await client.connect();
 
     const usersCollection = client.db("MyScheduler").collection("users");
-    const userAvailabilityCollection = client.db("MyScheduler").collection("userAvailability");
+    const userAvailabilityCollection = client
+      .db("MyScheduler")
+      .collection("userAvailability");
     const blogsCollection = client.db("MyScheduler").collection("blogs");
     const timeCollection = client.db("MyScheduler").collection("times");
 
@@ -144,11 +146,15 @@ async function run() {
       res.send(result);
     });
 
-
-
     app.put("/userAvailability/:email", async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
+      const existAvailability = await userAvailabilityCollection.findOne(
+        filter
+      );
+      if (existAvailability) {
+        return;
+      }
       const availability = req.body;
       const options = { upsert: true };
       const updateDoc = {
@@ -221,7 +227,7 @@ async function run() {
         updatedDoc,
         options
       );
-      res.send(result)
+      res.send(result);
     });
 
     // / ///////////////////////////////////////////////////////////  //
