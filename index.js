@@ -149,21 +149,23 @@ async function run() {
     app.put("/userAvailability/:email", async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
-      if (filter) {
+      const existAvailability = await userAvailabilityCollection.findOne(
+        filter
+      );
+      if (existAvailability) {
         return;
-      } else if (!filter) {
-        const availability = req.body;
-        const options = { upsert: true };
-        const updateDoc = {
-          $set: availability,
-        };
-        const result = await userAvailabilityCollection.updateOne(
-          filter,
-          updateDoc,
-          options
-        );
-        res.send(result);
       }
+      const availability = req.body;
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: availability,
+      };
+      const result = await userAvailabilityCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      res.send(result);
     });
 
     app.put("/availability/checked/:id", verifyJWT, async (req, res) => {
