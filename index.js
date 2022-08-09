@@ -37,11 +37,11 @@ async function run() {
     await client.connect();
 
     const usersCollection = client.db("MyScheduler").collection("users");
-    const scheduleCollection = client.db("MyScheduler").collection("schedules");
-    const userAvailabilityCollection = client
-      .db("MyScheduler")
-      .collection("userAvailability");
+    const userAvailabilityCollection = client.db("MyScheduler").collection("userAvailability");
     const blogsCollection = client.db("MyScheduler").collection("blogs");
+    const timeCollection = client.db("MyScheduler").collection("times");
+
+    // User Section ////////////////////////////////////////////////
 
     app.get("/user/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
@@ -67,19 +67,6 @@ async function run() {
         updateDoc,
         options
       );
-      res.send(result);
-    });
-
-    app.get("/blogs", async (req, res) => {
-      const query = {};
-      const cursor = blogsCollection.find(query);
-      const blogs = await cursor.toArray();
-      res.send(blogs);
-    });
-    app.get("/blogs/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: ObjectId(id) };
-      const result = await blogsCollection.findOne(query);
       res.send(result);
     });
 
@@ -120,6 +107,21 @@ async function run() {
       res.send({ result, token });
     });
 
+    // Blogs Section //////////////////////////////////////////////////////
+
+    app.get("/blogs", async (req, res) => {
+      const query = {};
+      const cursor = blogsCollection.find(query);
+      const blogs = await cursor.toArray();
+      res.send(blogs);
+    });
+    app.get("/blogs/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await blogsCollection.findOne(query);
+      res.send(result);
+    });
+
     //  Availability Api section //////////////////////////////////////////////////
 
     app.get("/availability/:email", async (req, res) => {
@@ -128,6 +130,21 @@ async function run() {
       const result = await userAvailabilityCollection.findOne(filter);
       res.send(result);
     });
+
+    app.get("/times", async (req, res) => {
+      const query = {};
+      const cursor = timeCollection.find(query);
+      const times = await cursor.toArray();
+      res.send(times);
+    });
+    app.get("/times/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await timeCollection.findOne(query);
+      res.send(result);
+    });
+
+
 
     app.put("/userAvailability/:email", async (req, res) => {
       const email = req.params.email;
