@@ -37,7 +37,6 @@ async function run() {
     await client.connect();
 
     const usersCollection = client.db("MyScheduler").collection("users");
-    const scheduleCollection = client.db("MyScheduler").collection("schedules");
     const userAvailabilityCollection = client
       .db("MyScheduler")
       .collection("userAvailability");
@@ -132,17 +131,21 @@ async function run() {
     app.put("/userAvailability/:email", async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
-      const availability = req.body;
-      const options = { upsert: true };
-      const updateDoc = {
-        $set: availability,
-      };
-      const result = await userAvailabilityCollection.updateOne(
-        filter,
-        updateDoc,
-        options
-      );
-      res.send(result);
+      if (filter) {
+        return;
+      } else if (!filter) {
+        const availability = req.body;
+        const options = { upsert: true };
+        const updateDoc = {
+          $set: availability,
+        };
+        const result = await userAvailabilityCollection.updateOne(
+          filter,
+          updateDoc,
+          options
+        );
+        res.send(result);
+      }
     });
 
     app.put("/availability/checked/:id", verifyJWT, async (req, res) => {
@@ -204,7 +207,7 @@ async function run() {
         updatedDoc,
         options
       );
-      res.send(result)
+      res.send(result);
     });
 
     // / ///////////////////////////////////////////////////////////  //
