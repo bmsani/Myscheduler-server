@@ -42,6 +42,7 @@ async function run() {
       .collection("userAvailability");
     const blogsCollection = client.db("MyScheduler").collection("blogs");
     const timeCollection = client.db("MyScheduler").collection("times");
+    const eventCollection = client.db("MyScheduler").collection("event");
 
     // User Section ////////////////////////////////////////////////
 
@@ -227,6 +228,29 @@ async function run() {
         updatedDoc,
         options
       );
+      res.send(result);
+    });
+
+    // ////////////////// Create event APIS ////////////////////////////
+    app.get("/getEvent/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const result = await eventCollection.find(filter).toArray();
+      res.send(result);
+    });
+
+    app.post("/updateEvent", async (req, res) => {
+      const data = req.body;
+      const addDoc = {
+        email: data.email,
+        eventName: data.eventName,
+        eventLocation: data.eventLocation,
+        eventDescription: data.eventDescription,
+        eventLink: data.eventLink,
+        eventDuration: data.eventDuration,
+        availabilities: data.availabilities,
+      };
+      const result = await eventCollection.insertOne(addDoc);
       res.send(result);
     });
 
