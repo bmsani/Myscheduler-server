@@ -133,19 +133,6 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/times", async (req, res) => {
-      const query = {};
-      const cursor = timeCollection.find(query);
-      const times = await cursor.toArray();
-      res.send(times);
-    });
-    app.get("/times/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: ObjectId(id) };
-      const result = await timeCollection.findOne(query);
-      res.send(result);
-    });
-
     app.put("/userAvailability/:email", async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
