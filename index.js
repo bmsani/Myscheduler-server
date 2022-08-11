@@ -248,7 +248,7 @@ async function run() {
         eventName: data.eventName,
         eventLocation: data.eventLocation,
         eventDescription: data.eventDescription,
-        eventLink: data.eventLink,
+        // eventLink: data.eventLink,
         eventDuration: data.eventDuration,
         availabilities: data.availabilities,
       };
