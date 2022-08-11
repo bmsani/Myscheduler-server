@@ -5,9 +5,6 @@ const GOOGLE_CLIENT_ID =
   "246190552758-iv4qnbua1chul41b87mfch0gsoeqe8bj.apps.googleusercontent.com";
 const GOOGLE_CLIENT_SECRET = "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";
 
-// const REFRESH_TOKEN =
-//   "1//0g10oJJ3mxeK8CgYIARAAGBASNwF-L9IropbQEQFHtD9LBWalN12vgAmKNq2HUW_g5bIzTjrLKyusWaW9RQWCbFJ2lh2YuN5e4JA";
-
 const oauth2Client = new google.auth.OAuth2(
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,

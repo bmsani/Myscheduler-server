@@ -1,6 +1,5 @@
 const express = require("express");
 const app = express();
-// const router = require("express").Router();
 const router = express.Router();
 const port = process.env.PORT || 5000;
 const jwt = require("jsonwebtoken");
@@ -44,11 +43,13 @@ async function run() {
     await client.connect();
 
     const usersCollection = client.db("MyScheduler").collection("users");
-    const scheduleCollection = client.db("MyScheduler").collection("schedules");
     const userAvailabilityCollection = client
       .db("MyScheduler")
       .collection("userAvailability");
     const blogsCollection = client.db("MyScheduler").collection("blogs");
+    const timeCollection = client.db("MyScheduler").collection("times");
+
+    // User Section ////////////////////////////////////////////////
 
     router.get("/test", async(req, res)=>{
       console.log('test req')
@@ -79,19 +80,6 @@ async function run() {
         updateDoc,
         options
       );
-      res.send(result);
-    });
-
-    app.get("/blogs", async (req, res) => {
-      const query = {};
-      const cursor = blogsCollection.find(query);
-      const blogs = await cursor.toArray();
-      res.send(blogs);
-    });
-    app.get("/blogs/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: ObjectId(id) };
-      const result = await blogsCollection.findOne(query);
       res.send(result);
     });
 
@@ -133,6 +121,21 @@ async function run() {
       res.send({ result, token });
     });
 
+    // Blogs Section //////////////////////////////////////////////////////
+
+    app.get("/blogs", async (req, res) => {
+      const query = {};
+      const cursor = blogsCollection.find(query);
+      const blogs = await cursor.toArray();
+      res.send(blogs);
+    });
+    app.get("/blogs/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await blogsCollection.findOne(query);
+      res.send(result);
+    });
+
     //  Availability Api section //////////////////////////////////////////////////
 
     router.get("/availability/:email", async (req, res) => {
@@ -142,9 +145,28 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/times", async (req, res) => {
+      const query = {};
+      const cursor = timeCollection.find(query);
+      const times = await cursor.toArray();
+      res.send(times);
+    });
+    app.get("/times/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await timeCollection.findOne(query);
+      res.send(result);
+    });
+
     router.put("/userAvailability/:email", async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
+      const existAvailability = await userAvailabilityCollection.findOne(
+        filter
+      );
+      if (existAvailability) {
+        return;
+      }
       const availability = req.body;
       const options = { upsert: true };
       const updateDoc = {
