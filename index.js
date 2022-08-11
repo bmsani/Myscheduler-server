@@ -11,11 +11,11 @@ const createError = require("http-errors");
 const morgan = require("morgan");
 
 // Middle ware
-router.use(cors());
-router.use(express.json());
-router.use(express.urlencoded({ extended: false }));
-router.use(morgan("dev"));
-router.use(router);
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(morgan("dev"));
+app.use(router);
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.y46qz7a.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
@@ -55,14 +55,14 @@ async function run() {
       res.send({message: "test"})
     })
 
-    router.get("/user/:email", verifyJWT, async (req, res) => {
+    router.get("/user/:email", async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       const user = await usersCollection.findOne(filter);
       res.send(user);
     });
 
-    router.put("/updatedUser/:email", verifyJWT, async (req, res) => {
+    app.put("/updatedUser/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
       const { name, message, mobile } = req.body;
       const filter = { email: email };
@@ -82,20 +82,20 @@ async function run() {
       res.send(result);
     });
 
-    router.get("/blogs", async (req, res) => {
+    app.get("/blogs", async (req, res) => {
       const query = {};
       const cursor = blogsCollection.find(query);
       const blogs = await cursor.toArray();
       res.send(blogs);
     });
-    router.get("/blogs/:id", async (req, res) => {
+    app.get("/blogs/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const result = await blogsCollection.findOne(query);
       res.send(result);
     });
 
-    router.put("/brandLogo/:email", verifyJWT, async (req, res) => {
+    app.put("/brandLogo/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
       const brandLogo = req.body;
       const filter = { email: email };
@@ -158,7 +158,7 @@ async function run() {
       res.send(result);
     });
 
-    router.put("/availability/checked/:id", verifyJWT, async (req, res) => {
+    app.put("/availability/checked/:id", verifyJWT, async (req, res) => {
       const email = req.query.email;
       if (req.decoded.email !== email) {
         return res.status(403).send({ message: "Access forbidden" });
@@ -185,7 +185,7 @@ async function run() {
       res.send(result);
     });
 
-    router.get("/availability/:daysId/:dayId", async (req, res) => {
+    app.get("/availability/:daysId/:dayId", async (req, res) => {
       const daysId = req.params.daysId;
       const query = { _id: ObjectId(daysId) };
       const filter = await userAvailabilityCollection.findOne(query);
@@ -194,7 +194,7 @@ async function run() {
       res.send(result);
     });
 
-    router.put("/editAvailability/:daysId/:dayId", async (req, res) => {
+    app.put("/editAvailability/:daysId/:dayId", async (req, res) => {
       const daysId = req.params.daysId;
       const filter = { _id: ObjectId(daysId) };
       const find = await userAvailabilityCollection.findOne(filter);
@@ -226,17 +226,17 @@ async function run() {
 }
 run().catch(console.dir);
 
-router.get("/", (req, res) => {
+app.get("/", (req, res) => {
   res.send("Hello World! from MyScheduler");
 });
 
-router.use("/api", require("./routes/api.route"));
+app.use("/api", require("./routes/api.route"));
 
-router.use((req, res, next) => {
+app.use((req, res, next) => {
   next(createError.NotFound());
 });
 
-router.use((err, req, res, next) => {
+app.use((err, req, res, next) => {
   res.status(err.status || 500);
   res.send({
     status: err.status || 500,
@@ -244,6 +244,6 @@ router.use((err, req, res, next) => {
   });
 });
 
-router.listen(port, () => {
+app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
