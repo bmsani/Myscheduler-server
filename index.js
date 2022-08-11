@@ -44,6 +44,46 @@ async function run() {
     const timeCollection = client.db("MyScheduler").collection("times");
     const eventCollection = client.db("MyScheduler").collection("event");
 
+    const verifyAdmin = async (req, res, next) => {
+      const requester = req.decoded.email;
+      const requesterAccount = await usersCollection.findOne({
+        email: requester,
+      });
+      if (requesterAccount.role === "admin") {
+        next();
+      } else {
+        res.status(403).send({ message: "forbidden access" });
+      }
+    };
+
+    // Admin ///////////////////////////////////////////////////////
+    app.get("/user", verifyJWT, verifyAdmin, async (req, res) => {
+      const users = await (await usersCollection.find().toArray()).reverse();
+      res.send(users);
+    });
+
+    app.put("/user/admin/:email", verifyJWT, verifyAdmin, async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const updateDoc = {
+        $set: { role: "admin" },
+      };
+      const result = await usersCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+    app.delete(
+      "/removeUser/:email",
+      verifyJWT,
+      verifyAdmin,
+      async (req, res) => {
+        const email = req.params.email;
+        const filter = { email: email };
+        const result = await usersCollection.deleteOne(filter);
+        res.send(result);
+      }
+    );
+
     // User Section ////////////////////////////////////////////////
 
     app.get("/user/:email", verifyJWT, async (req, res) => {
@@ -51,6 +91,13 @@ async function run() {
       const filter = { email: email };
       const user = await usersCollection.findOne(filter);
       res.send(user);
+    });
+
+    app.get("/admin/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = await usersCollection.findOne({ email: email });
+      const isAdmin = user.role === "admin";
+      res.send({ admin: isAdmin });
     });
 
     app.put("/updatedUser/:email", verifyJWT, async (req, res) => {
@@ -241,6 +288,11 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/getAllEvent", async (req, res) => {
+      const result = (await eventCollection.find().toArray()).reverse();
+      res.send(result);
+    });
+
     app.post("/updateEvent", async (req, res) => {
       const data = req.body;
       const addDoc = {
@@ -266,6 +318,7 @@ async function run() {
       const result = await eventCollection.deleteOne(filter);
       res.send(result);
     });
+
     // / ///////////////////////////////////////////////////////////  //
   } finally {
     // await client.close();
