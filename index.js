@@ -63,12 +63,12 @@ async function run() {
     };
 
     // Admin ///////////////////////////////////////////////////////
-    app.get("/user", verifyJWT, verifyAdmin, async (req, res) => {
+    router.get("/user", verifyJWT, verifyAdmin, async (req, res) => {
       const users = await (await usersCollection.find().toArray()).reverse();
       res.send(users);
     });
 
-    app.put("/user/admin/:email", verifyJWT, verifyAdmin, async (req, res) => {
+    router.put("/user/admin/:email", verifyJWT, verifyAdmin, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       const updateDoc = {
@@ -78,7 +78,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete(
+    router.delete(
       "/removeUser/:email",
       verifyJWT,
       verifyAdmin,
@@ -104,7 +104,7 @@ async function run() {
       res.send(user);
     });
 
-    app.get("/admin/:email", async (req, res) => {
+    router.get("/admin/:email", async (req, res) => {
       const email = req.params.email;
       const user = await usersCollection.findOne({ email: email });
       const isAdmin = user.role === "admin";
