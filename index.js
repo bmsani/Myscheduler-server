@@ -111,7 +111,7 @@ async function run() {
       res.send({ admin: isAdmin });
     });
 
-    app.put("/updatedUser/:email", verifyJWT, async (req, res) => {
+    router.put("/updatedUser/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
       const { name, message, mobile } = req.body;
       const filter = { email: email };
@@ -131,7 +131,7 @@ async function run() {
       res.send(result);
     });
 
-    app.put("/brandLogo/:email", verifyJWT, async (req, res) => {
+    router.put("/brandLogo/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
       const brandLogo = req.body;
       const filter = { email: email };
@@ -171,14 +171,14 @@ async function run() {
 
     // Blogs Section //////////////////////////////////////////////////////
 
-    app.get("/blogs", async (req, res) => {
+    router.get("/blogs", async (req, res) => {
       const query = {};
       const cursor = blogsCollection.find(query);
       const blogs = await cursor.toArray();
       res.send(blogs);
     });
 
-    app.get("/blogs/:id", async (req, res) => {
+    router.get("/blogs/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const result = await blogsCollection.findOne(query);
@@ -216,7 +216,7 @@ async function run() {
       res.send(result);
     });
 
-    app.put("/availability/checked/:id", verifyJWT, async (req, res) => {
+    router.put("/availability/checked/:id", verifyJWT, async (req, res) => {
       const email = req.query.email;
       if (req.decoded.email !== email) {
         return res.status(403).send({ message: "Access forbidden" });
@@ -243,7 +243,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/availability/:daysId/:dayId", async (req, res) => {
+    router.get("/availability/:daysId/:dayId", async (req, res) => {
       const daysId = req.params.daysId;
       const query = { _id: ObjectId(daysId) };
       const filter = await userAvailabilityCollection.findOne(query);
@@ -252,7 +252,7 @@ async function run() {
       res.send(result);
     });
 
-    app.put("/editAvailability/:daysId/:dayId", async (req, res) => {
+    router.put("/editAvailability/:daysId/:dayId", async (req, res) => {
       const daysId = req.params.daysId;
       const filter = { _id: ObjectId(daysId) };
       const find = await userAvailabilityCollection.findOne(filter);
@@ -279,7 +279,7 @@ async function run() {
     });
 
     // ////////////////// Create event APIS ////////////////////////////
-    app.get("/getEvent/:email", async (req, res) => {
+    router.get("/getEvent/:email", async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       const result = await (
@@ -288,19 +288,19 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/getSingleEvent/:id([0-9a-fA-F]{24})", async (req, res) => {
+    router.get("/getSingleEvent/:id([0-9a-fA-F]{24})", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await eventCollection.findOne(filter);
       res.send(result);
     });
 
-    app.get("/getAllEvent", async (req, res) => {
+    router.get("/getAllEvent", async (req, res) => {
       const result = (await eventCollection.find().toArray()).reverse();
       res.send(result);
     });
 
-    app.post("/updateEvent", async (req, res) => {
+    router.post("/updateEvent", async (req, res) => {
       const data = req.body;
       const addDoc = {
         email: data.email,
@@ -315,7 +315,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/deleteEvent/:id", verifyJWT, async (req, res) => {
+    router.delete("/deleteEvent/:id", verifyJWT, async (req, res) => {
       const email = req.query.email;
       if (req.decoded.email !== email) {
         return res.status(403).send({ message: "Access forbidden" });

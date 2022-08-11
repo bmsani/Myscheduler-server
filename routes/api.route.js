@@ -29,16 +29,9 @@ router.post("/create-event", async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     const refreshToken = authHeader.split(" ")[1];
-    const { eventData } = req.body;
-    const {
-      summary,
-      description,
-      location,
-      email,
-      startDateTime,
-      endDateTime,
-    } = eventData;
-    console.log(refreshToken);
+    const { bookingConfirm } = req.body;
+    const { summary, description, email, startTime, endTime } = bookingConfirm;
+    console.log(summary, description, email, startTime, endTime);
 
     oauth2Client.setCredentials({ refresh_token: refreshToken });
     const calendar = google.calendar("v3");
@@ -48,13 +41,12 @@ router.post("/create-event", async (req, res, next) => {
       requestBody: {
         summary: summary,
         description: description,
-        location: location,
         colorId: "7",
         start: {
-          dateTime: startDateTime,
+          dateTime: startTime,
         },
         end: {
-          dateTime: endDateTime,
+          dateTime: endTime,
         },
         attendees: [{ email: email }],
       },
