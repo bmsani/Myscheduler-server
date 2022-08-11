@@ -48,13 +48,14 @@ async function run() {
       .collection("userAvailability");
     const blogsCollection = client.db("MyScheduler").collection("blogs");
     const timeCollection = client.db("MyScheduler").collection("times");
+    const eventCollection = client.db("MyScheduler").collection("event");
 
     // User Section ////////////////////////////////////////////////
 
-    router.get("/test", async(req, res)=>{
-      console.log('test req')
-      res.send({message: "test"})
-    })
+    router.get("/test", async (req, res) => {
+      console.log("test req");
+      res.send({ message: "test" });
+    });
 
     router.get("/user/:email", async (req, res) => {
       const email = req.params.email;
@@ -100,7 +101,7 @@ async function run() {
     });
 
     router.put("/user/:email", async (req, res) => {
-      console.log('log in req');
+      console.log("log in req");
       const email = req.params.email;
       const user = req.body;
       const filter = { email: email };
@@ -142,19 +143,6 @@ async function run() {
       const email = req.params.email;
       const filter = { email: email };
       const result = await userAvailabilityCollection.findOne(filter);
-      res.send(result);
-    });
-
-    app.get("/times", async (req, res) => {
-      const query = {};
-      const cursor = timeCollection.find(query);
-      const times = await cursor.toArray();
-      res.send(times);
-    });
-    app.get("/times/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: ObjectId(id) };
-      const result = await timeCollection.findOne(query);
       res.send(result);
     });
 
@@ -242,6 +230,49 @@ async function run() {
       res.send(result);
     });
 
+    // ////////////////// Create event APIS ////////////////////////////
+    app.get("/getEvent/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const result = await (
+        await eventCollection.find(filter).toArray()
+      ).reverse();
+      res.send(result);
+    });
+
+    app.get("/getSingleEvent/:id([0-9a-fA-F]{24})", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await eventCollection.findOne(filter);
+      res.send(result);
+    });
+
+    app.post("/updateEvent", async (req, res) => {
+      const data = req.body;
+      const addDoc = {
+        email: data.email,
+        eventName: data.eventName,
+        eventLocation: data.eventLocation,
+        eventDescription: data.eventDescription,
+        // eventLink: data.eventLink,
+        eventDuration: data.eventDuration,
+        availabilities: data.availabilities,
+      };
+      const result = await eventCollection.insertOne(addDoc);
+      res.send(result);
+    });
+
+    app.delete("/deleteEvent/:id", verifyJWT, async (req, res) => {
+      const email = req.query.email;
+      if (req.decoded.email !== email) {
+        return res.status(403).send({ message: "Access forbidden" });
+      }
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await eventCollection.deleteOne(filter);
+      res.send(result);
+    });
+    // / ///////////////////////////////////////////////////////////  //
   } finally {
     // await client.close();
   }
