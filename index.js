@@ -235,7 +235,9 @@ async function run() {
     app.get("/getEvent/:email", async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
-      const result = await eventCollection.find(filter).toArray();
+      const result = await (
+        await eventCollection.find(filter).toArray()
+      ).reverse();
       res.send(result);
     });
 
@@ -254,6 +256,16 @@ async function run() {
       res.send(result);
     });
 
+    app.delete("/deleteEvent/:id", verifyJWT, async (req, res) => {
+      const email = req.query.email;
+      if (req.decoded.email !== email) {
+        return res.status(403).send({ message: "Access forbidden" });
+      }
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await eventCollection.deleteOne(filter);
+      res.send(result);
+    });
     // / ///////////////////////////////////////////////////////////  //
   } finally {
     // await client.close();
