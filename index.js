@@ -42,6 +42,7 @@ async function run() {
       .collection("userAvailability");
     const blogsCollection = client.db("MyScheduler").collection("blogs");
     const timeCollection = client.db("MyScheduler").collection("times");
+    const eventCollection = client.db("MyScheduler").collection("event");
 
     // User Section ////////////////////////////////////////////////
 
@@ -217,6 +218,41 @@ async function run() {
       res.send(result);
     });
 
+    // ////////////////// Create event APIS ////////////////////////////
+    app.get("/getEvent/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const result = await (
+        await eventCollection.find(filter).toArray()
+      ).reverse();
+      res.send(result);
+    });
+
+    app.post("/updateEvent", async (req, res) => {
+      const data = req.body;
+      const addDoc = {
+        email: data.email,
+        eventName: data.eventName,
+        eventLocation: data.eventLocation,
+        eventDescription: data.eventDescription,
+        // eventLink: data.eventLink,
+        eventDuration: data.eventDuration,
+        availabilities: data.availabilities,
+      };
+      const result = await eventCollection.insertOne(addDoc);
+      res.send(result);
+    });
+
+    app.delete("/deleteEvent/:id", verifyJWT, async (req, res) => {
+      const email = req.query.email;
+      if (req.decoded.email !== email) {
+        return res.status(403).send({ message: "Access forbidden" });
+      }
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await eventCollection.deleteOne(filter);
+      res.send(result);
+    });
     // / ///////////////////////////////////////////////////////////  //
   } finally {
     // await client.close();
