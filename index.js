@@ -46,7 +46,7 @@ async function run() {
 
     // User Section ////////////////////////////////////////////////
 
-    app.get("/user/:email", verifyJWT, async (req, res) => {
+    app.get("/user/:email", async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       const user = await usersCollection.findOne(filter);
@@ -227,6 +227,14 @@ async function run() {
       ).reverse();
       res.send(result);
     });
+
+    app.get("/getSingleEvent/:id([0-9a-fA-F]{24})", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await eventCollection.findOne(filter)
+      res.send(result);
+    });
+
 
     app.post("/updateEvent", async (req, res) => {
       const data = req.body;
