@@ -68,15 +68,20 @@ async function run() {
       res.send(users);
     });
 
-    router.put("/user/admin/:email", verifyJWT, verifyAdmin, async (req, res) => {
-      const email = req.params.email;
-      const filter = { email: email };
-      const updateDoc = {
-        $set: { role: "admin" },
-      };
-      const result = await usersCollection.updateOne(filter, updateDoc);
-      res.send(result);
-    });
+    router.put(
+      "/user/admin/:email",
+      verifyJWT,
+      verifyAdmin,
+      async (req, res) => {
+        const email = req.params.email;
+        const filter = { email: email };
+        const updateDoc = {
+          $set: { role: "admin" },
+        };
+        const result = await usersCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      }
+    );
 
     router.delete(
       "/removeUser/:email",
@@ -167,6 +172,19 @@ async function run() {
         { expiresIn: "1d" }
       );
       res.send({ result, token });
+    });
+
+    // store refresh token for google calendar access
+    router.put("/refreshToken/:email", async (req, res) => {
+      const { refreshToken } = req.body;
+      console.log(refreshToken);
+      const filter = { email: email };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: refreshToken,
+      };
+      const result = await usersCollection.updateOne(filter, updatedDoc, options);
+      res.send(result)
     });
 
     // Blogs Section //////////////////////////////////////////////////////
