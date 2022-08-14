@@ -13,7 +13,6 @@ const GOOGLE_CLIENT_ID =
   "246190552758-iv4qnbua1chul41b87mfch0gsoeqe8bj.apps.googleusercontent.com";
 const GOOGLE_CLIENT_SECRET = "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";
 
-const REFRESH_TOKEN = "1//0giltSolzyouKCgYIARAAGBASNwF-L9IrGD-Bl5LuIk0h49KDzLEjR7DwJJ7fmq0uaS8GckYKgUxFnXhDb9h_YFX3tYBYhluiIIk"
 
 const oauth2Client = new google.auth.OAuth2(
   GOOGLE_CLIENT_ID,
@@ -45,7 +44,6 @@ async function run() {
       const filter = { email: hostEmail };
       const user = await usersCollection.findOne(filter);
       const { refreshToken } = user;
-      console.log(user, refreshToken);
       const { summary, description, email, startTime, endTime } =
         bookingConfirm;
       oauth2Client.setCredentials({ refresh_token: refreshToken });
