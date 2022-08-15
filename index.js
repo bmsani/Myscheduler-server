@@ -47,7 +47,6 @@ async function run() {
       .db("MyScheduler")
       .collection("userAvailability");
     const blogsCollection = client.db("MyScheduler").collection("blogs");
-    const timeCollection = client.db("MyScheduler").collection("times");
     const eventCollection = client.db("MyScheduler").collection("event");
 
     const verifyAdmin = async (req, res, next) => {
@@ -312,7 +311,6 @@ async function run() {
         eventName: data.eventName,
         eventLocation: data.eventLocation,
         eventDescription: data.eventDescription,
-        // eventLink: data.eventLink,
         eventDuration: data.eventDuration,
         availabilities: data.availabilities,
       };
