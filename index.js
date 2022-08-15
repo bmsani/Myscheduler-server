@@ -173,6 +173,19 @@ async function run() {
       res.send({ result, token });
     });
 
+    // store refresh token for google calendar access
+    router.put("/refreshToken/:email", async (req, res) => {
+      const { refreshToken } = req.body;
+      console.log(refreshToken);
+      const filter = { email: email };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: refreshToken,
+      };
+      const result = await usersCollection.updateOne(filter, updatedDoc, options);
+      res.send(result)
+    });
+
     // Blogs Section //////////////////////////////////////////////////////
 
     router.get("/blogs", async (req, res) => {
