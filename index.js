@@ -335,21 +335,6 @@ async function run() {
       res.send(result);
     });
 
-    router.post("/updateEvent", async (req, res) => {
-      const data = req.body;
-      const addDoc = {
-        email: data.email,
-        eventName: data.eventName,
-        eventLocation: data.eventLocation,
-        eventDescription: data.eventDescription,
-        // eventLink: data.eventLink,
-        eventDuration: data.eventDuration,
-        availabilities: data.availabilities,
-      };
-      const result = await eventCollection.insertOne(addDoc);
-      res.send(result);
-    });
-
     router.delete("/deleteEvent/:id", verifyJWT, async (req, res) => {
       const email = req.query.email;
       if (req.decoded.email !== email) {
@@ -359,6 +344,115 @@ async function run() {
       const filter = { _id: ObjectId(id) };
       const result = await eventCollection.deleteOne(filter);
       res.send(result);
+    });
+
+    router.put(
+      "/customAvailability/checked/:id",
+      verifyJWT,
+      async (req, res) => {
+        const findEmail = req.query.email;
+        if (req.decoded.email !== findEmail) {
+          return res.status(403).send({ message: "Access forbidden" });
+        }
+        const id = req.params.id;
+        const { eventId } = req.body;
+        const query = { _id: ObjectId(id) };
+        console.log(eventId);
+        const filter = { id: eventId };
+        if (!eventId) {
+          const find = await userAvailabilityCollection.findOne(query);
+          const dayId = req.query.dayDataId;
+          const mainData = find.dayData.find((day) => day.id === dayId);
+          const { email, dayData } = find;
+          const eventID = new Date().valueOf().toString();
+          if (req.query.dayStatus === "false") {
+            mainData.checked = false;
+          } else if (req.query.dayStatus === "true") {
+            mainData.checked = true;
+          }
+          const options = { upsert: true };
+          const updateDoc = {
+            $set: {
+              id: eventID,
+              email: email,
+              dayData: dayData,
+            },
+          };
+          const result = await eventCollection.updateOne(
+            filter,
+            updateDoc,
+            options
+          );
+          res.send({ result, eventID });
+        } else if (eventId) {
+          const find = await eventCollection.findOne(filter);
+          const dayId = req.query.dayDataId;
+          const mainData = find.dayData.find((day) => day.id === dayId);
+          const { dayData } = find;
+          if (req.query.dayStatus === "false") {
+            mainData.checked = false;
+          } else if (req.query.dayStatus === "true") {
+            mainData.checked = true;
+          }
+          const options = { upsert: true };
+          const updateDoc = {
+            $set: {
+              // id: eventId,
+              // email: email,
+              dayData: dayData,
+            },
+          };
+          const result = await eventCollection.updateOne(
+            filter,
+            updateDoc,
+            options
+          );
+          res.send({ result, eventId });
+        }
+      }
+    );
+
+    router.get("/customAvailability/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { id: id };
+      const find = await eventCollection.findOne(filter);
+      res.send(find);
+    });
+
+    router.put("/createNewEvent?:id", async (req, res) => {
+      const id = req.params.id;
+      if (id) {
+        const filter = { id: id };
+        const option = { upsert: true };
+        const data = req.body;
+        const addDoc = {
+          $set: {
+            email: data.email,
+            eventName: data.eventName,
+            eventLocation: data.eventLocation,
+            eventDescription: data.eventDescription,
+            eventDuration: data.eventDuration,
+          },
+        };
+        const result = await eventCollection.updateOne(filter, addDoc, option);
+        res.send(result);
+      } else if (!id) {
+        const filter = { id: id };
+        const option = { upsert: true };
+        const data = req.body;
+        const addDoc = {
+          $set: {
+            email: data.email,
+            eventName: data.eventName,
+            eventLocation: data.eventLocation,
+            eventDescription: data.eventDescription,
+            eventDuration: data.eventDuration,
+            eventAvailability: data.availabilities,
+          },
+        };
+        const result = await eventCollection.updateOne(filter, addDoc, option);
+        res.send(result);
+      }
     });
 
     // / ///////////////////////////////////////////////////////////  //
