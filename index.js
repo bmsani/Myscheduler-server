@@ -297,6 +297,38 @@ async function run() {
       res.send(result);
     });
 
+    router.put("/editInterval/:daysId/:dayId", async (req, res) => {
+      const daysId = req.params.daysId;
+      const filter = { _id: ObjectId(daysId) };
+      const find = await userAvailabilityCollection.findOne(filter);
+      const dayId = req.params.dayId;
+      const { starting, ending } = req.body;
+      const dayData = find.dayData.find((d) => d.id === dayId);
+      if (
+        dayData.interval.starting !== starting &&
+        dayData.interval.ending !== ending
+      ) {
+        dayData.interval.starting = starting;
+        dayData.interval.ending = ending;
+      } else if (
+        dayData.interval.starting === starting &&
+        dayData.interval.ending === ending
+      ) {
+        dayData.interval.starting = starting;
+        dayData.interval.ending = ending;
+      }
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: find,
+      };
+      const result = await userAvailabilityCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result);
+    });
+
     // ////////////////// Create event APIS ////////////////////////////
     router.get("/getEvent/:email", async (req, res) => {
       const email = req.params.email;
