@@ -66,10 +66,10 @@ async function run() {
           attendees: [{ email: email }],
           conferenceData: {
             createRequest: {
-                requestId: "sample123",
-                conferenceSolutionKey: { type: "hangoutsMeet" },
+              requestId: "sample123",
+              conferenceSolutionKey: { type: "hangoutsMeet" },
             },
-        },
+          },
         },
       });
       res.send(response);
