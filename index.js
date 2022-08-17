@@ -65,7 +65,7 @@ async function run() {
 
     // Admin ///////////////////////////////////////////////////////
     router.get("/user", verifyJWT, verifyAdmin, async (req, res) => {
-      const users = await (await usersCollection.find().toArray()).reverse();
+      const users = await (await usersCollection.find({}).toArray()).reverse();
       res.send(users);
     });
 
@@ -99,7 +99,6 @@ async function run() {
     // User Section ////////////////////////////////////////////////
 
     router.get("/test", async (req, res) => {
-      console.log("test req");
       res.send({ message: "test" });
     });
 
@@ -177,14 +176,17 @@ async function run() {
     // store refresh token for google calendar access
     router.put("/refreshToken/:email", async (req, res) => {
       const { refreshToken } = req.body;
-      console.log(refreshToken);
       const filter = { email: email };
       const options = { upsert: true };
       const updatedDoc = {
         $set: refreshToken,
       };
-      const result = await usersCollection.updateOne(filter, updatedDoc, options);
-      res.send(result)
+      const result = await usersCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result);
     });
 
     // Payment Section ////////////////////////////////////////////////////
@@ -324,6 +326,38 @@ async function run() {
       res.send(result);
     });
 
+    router.put("/editInterval/:daysId/:dayId", async (req, res) => {
+      const daysId = req.params.daysId;
+      const filter = { _id: ObjectId(daysId) };
+      const find = await userAvailabilityCollection.findOne(filter);
+      const dayId = req.params.dayId;
+      const { starting, ending } = req.body;
+      const dayData = find.dayData.find((d) => d.id === dayId);
+      if (
+        dayData.interval.starting !== starting &&
+        dayData.interval.ending !== ending
+      ) {
+        dayData.interval.starting = starting;
+        dayData.interval.ending = ending;
+      } else if (
+        dayData.interval.starting === starting &&
+        dayData.interval.ending === ending
+      ) {
+        dayData.interval.starting = starting;
+        dayData.interval.ending = ending;
+      }
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: find,
+      };
+      const result = await userAvailabilityCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result);
+    });
+
     // ////////////////// Create event APIS ////////////////////////////
     router.get("/getEvent/:email", async (req, res) => {
       const email = req.params.email;
@@ -368,6 +402,123 @@ async function run() {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await eventCollection.deleteOne(filter);
+      res.send(result);
+    });
+
+    // create custom availability for individual event
+
+    router.put(
+      "/customAvailability/checked/:id",
+      verifyJWT,
+      async (req, res) => {
+        const findEmail = req.query.email;
+        if (req.decoded.email !== findEmail) {
+          return res.status(403).send({ message: "Access forbidden" });
+        }
+        const id = req.params.id;
+        const { eventId } = req.body;
+        const query = { _id: ObjectId(id) };
+        const filter = { id: eventId };
+        if (!eventId) {
+          const find = await userAvailabilityCollection.findOne(query);
+          const dayId = req.query.dayDataId;
+          const mainData = find.dayData.find((day) => day.id === dayId);
+          const { email, dayData } = find;
+          const eventID = new Date().valueOf().toString();
+          if (req.query.dayStatus === "false") {
+            mainData.checked = false;
+          } else if (req.query.dayStatus === "true") {
+            mainData.checked = true;
+          }
+          const options = { upsert: true };
+          const updateDoc = {
+            $set: {
+              id: eventID,
+              email: email,
+              dayData: dayData,
+            },
+          };
+          const result = await eventCollection.updateOne(
+            filter,
+            updateDoc,
+            options
+          );
+          res.send({ result, eventID });
+        } else {
+          const find = await eventCollection.findOne(filter);
+          const dayId = req.query.dayDataId;
+          const mainData = find.dayData.find((day) => day.id === dayId);
+          const { _id, email, dayData } = find;
+          if (req.query.dayStatus === "false") {
+            mainData.checked = false;
+          } else if (req.query.dayStatus === "true") {
+            mainData.checked = true;
+          }
+          const options = { upsert: true };
+          const updateDoc = {
+            $set: {
+              id: eventId,
+              email: email,
+              dayData: dayData,
+            },
+          };
+          const result = await eventCollection.updateOne(
+            filter,
+            updateDoc,
+            options
+          );
+          res.send({ result, eventId });
+        }
+      }
+    );
+
+    router.get("/customAvailability/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { id: id };
+      const find = await eventCollection.findOne(filter);
+      res.send(find);
+    });
+
+    router.post("/createNewEvent", async (req, res) => {
+      const {
+        email,
+        eventName,
+        eventLocation,
+        eventDescription,
+        eventDuration,
+        dayData,
+      } = req.body;
+      const addDoc = {
+        email: email,
+        eventName: eventName,
+        eventLocation: eventLocation,
+        eventDescription: eventDescription,
+        eventDuration: eventDuration,
+        dayData: dayData,
+      };
+      const result = await eventCollection.insertOne(addDoc);
+      res.send(result);
+    });
+
+    router.put("/createNewEvent/:id", async (req, res) => {
+      const id = req.params.id;
+      const { eventName, eventLocation, eventDescription, eventDuration } =
+        req.body;
+      const filter = { id: id };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          eventName: eventName,
+          eventLocation: eventLocation,
+          eventDescription: eventDescription,
+          eventDuration: eventDuration,
+        },
+      };
+      const result = await eventCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
       res.send(result);
     });
 
