@@ -92,6 +92,7 @@ async function run() {
         date,
         eventStartTime,
         eventEndTime,
+        eventLocation,
       } = req.body;
       const addDoc = {
         eventName: eventName,
@@ -102,6 +103,7 @@ async function run() {
         date: date,
         eventStartTime: eventStartTime,
         eventEndTime: eventEndTime,
+        eventLocation: eventLocation,
       };
       console.log(addDoc);
       const result = await bookingConfirmCollection.insertOne(addDoc);
@@ -109,6 +111,21 @@ async function run() {
     } catch (error) {
       next(error);
     }
+  });
+
+  // get user all booked events
+  router.get("/bookedEvents/:email", async (req, res, next) => {
+    const email = req.params.email;
+    const filter = { hostEmail: email };
+    const result = await bookingConfirmCollection.find(filter).toArray();
+    res.send(result);
+  });
+  // delete single booked events
+  router.delete("/bookedEventDelete/:id", async (req, res, next) => {
+    const id = req.params.id;
+    const filter = { _id: ObjectId(id) };
+    const result = await bookingConfirmCollection.deleteOne(filter);
+    res.send(result);
   });
 }
 run().catch(console.dir);

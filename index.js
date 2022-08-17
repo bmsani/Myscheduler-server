@@ -64,7 +64,7 @@ async function run() {
 
     // Admin ///////////////////////////////////////////////////////
     router.get("/user", verifyJWT, verifyAdmin, async (req, res) => {
-      const users = await (await usersCollection.find().toArray()).reverse();
+      const users = await (await usersCollection.find({}).toArray()).reverse();
       res.send(users);
     });
 
