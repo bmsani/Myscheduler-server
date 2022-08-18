@@ -8,6 +8,7 @@ require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const createError = require("http-errors");
 const morgan = require("morgan");
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Middle ware
 app.use(cors());
@@ -47,8 +48,8 @@ async function run() {
       .db("MyScheduler")
       .collection("userAvailability");
     const blogsCollection = client.db("MyScheduler").collection("blogs");
-    const timeCollection = client.db("MyScheduler").collection("times");
     const eventCollection = client.db("MyScheduler").collection("event");
+    const paymentsCollection = client.db("MyScheduler").collection("payments");
 
     const verifyAdmin = async (req, res, next) => {
       const requester = req.decoded.email;
@@ -64,7 +65,7 @@ async function run() {
 
     // Admin ///////////////////////////////////////////////////////
     router.get("/user", verifyJWT, verifyAdmin, async (req, res) => {
-      const users = await (await usersCollection.find().toArray()).reverse();
+      const users = await (await usersCollection.find({}).toArray()).reverse();
       res.send(users);
     });
 
@@ -117,7 +118,7 @@ async function run() {
 
     router.put("/updatedUser/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
-      const { name, message, mobile } = req.body;
+      const { name, message, mobile, imageURL } = req.body;
       const filter = { email: email };
       const options = { upsert: true };
       const updateDoc = {
@@ -125,6 +126,7 @@ async function run() {
           name: name,
           message: message,
           mobile: mobile,
+          imageURL: imageURL
         },
       };
       const result = await usersCollection.updateOne(
@@ -167,10 +169,54 @@ async function run() {
       const token = jwt.sign(
         { email: email },
         process.env.ACCESS_TOKEN_SECRET,
-        { expiresIn: "1d" }
+        { expiresIn: "7d" }
       );
       res.send({ result, token });
     });
+
+    // store refresh token for google calendar access
+    router.put("/refreshToken/:email", async (req, res) => {
+      const { refreshToken } = req.body;
+      const filter = { email: email };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: refreshToken,
+      };
+      const result = await usersCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result);
+    });
+
+    // Payment Section ////////////////////////////////////////////////////
+    router.post('/create-payment-intent', verifyJWT, async (req, res) => {
+      const { price } = req.body;
+      const amount = price * 100
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card']
+      })
+      res.send({ clientSecret: paymentIntent.client_secret })
+    })
+
+    router.patch('/user/:email', verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      console.log(filter);
+      const payment = req.body;
+      const updateDoc = {
+        $set: {
+          paymentStatus: true,
+          transactionId: payment.transactionId
+        },
+      }
+      const updatedPayment = await usersCollection.updateOne(filter, updateDoc);
+      res.send(updateDoc)
+
+    })
 
     // Blogs Section //////////////////////////////////////////////////////
 
@@ -342,7 +388,6 @@ async function run() {
         eventName: data.eventName,
         eventLocation: data.eventLocation,
         eventDescription: data.eventDescription,
-        // eventLink: data.eventLink,
         eventDuration: data.eventDuration,
         availabilities: data.availabilities,
       };
@@ -358,6 +403,123 @@ async function run() {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await eventCollection.deleteOne(filter);
+      res.send(result);
+    });
+
+    // create custom availability for individual event
+
+    router.put(
+      "/customAvailability/checked/:id",
+      verifyJWT,
+      async (req, res) => {
+        const findEmail = req.query.email;
+        if (req.decoded.email !== findEmail) {
+          return res.status(403).send({ message: "Access forbidden" });
+        }
+        const id = req.params.id;
+        const { eventId } = req.body;
+        const query = { _id: ObjectId(id) };
+        const filter = { id: eventId };
+        if (!eventId) {
+          const find = await userAvailabilityCollection.findOne(query);
+          const dayId = req.query.dayDataId;
+          const mainData = find.dayData.find((day) => day.id === dayId);
+          const { email, dayData } = find;
+          const eventID = new Date().valueOf().toString();
+          if (req.query.dayStatus === "false") {
+            mainData.checked = false;
+          } else if (req.query.dayStatus === "true") {
+            mainData.checked = true;
+          }
+          const options = { upsert: true };
+          const updateDoc = {
+            $set: {
+              id: eventID,
+              email: email,
+              dayData: dayData,
+            },
+          };
+          const result = await eventCollection.updateOne(
+            filter,
+            updateDoc,
+            options
+          );
+          res.send({ result, eventID });
+        } else {
+          const find = await eventCollection.findOne(filter);
+          const dayId = req.query.dayDataId;
+          const mainData = find.dayData.find((day) => day.id === dayId);
+          const { _id, email, dayData } = find;
+          if (req.query.dayStatus === "false") {
+            mainData.checked = false;
+          } else if (req.query.dayStatus === "true") {
+            mainData.checked = true;
+          }
+          const options = { upsert: true };
+          const updateDoc = {
+            $set: {
+              id: eventId,
+              email: email,
+              dayData: dayData,
+            },
+          };
+          const result = await eventCollection.updateOne(
+            filter,
+            updateDoc,
+            options
+          );
+          res.send({ result, eventId });
+        }
+      }
+    );
+
+    router.get("/customAvailability/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { id: id };
+      const find = await eventCollection.findOne(filter);
+      res.send(find);
+    });
+
+    router.post("/createNewEvent", async (req, res) => {
+      const {
+        email,
+        eventName,
+        eventLocation,
+        eventDescription,
+        eventDuration,
+        dayData,
+      } = req.body;
+      const addDoc = {
+        email: email,
+        eventName: eventName,
+        eventLocation: eventLocation,
+        eventDescription: eventDescription,
+        eventDuration: eventDuration,
+        dayData: dayData,
+      };
+      const result = await eventCollection.insertOne(addDoc);
+      res.send(result);
+    });
+
+    router.put("/createNewEvent/:id", async (req, res) => {
+      const id = req.params.id;
+      const { eventName, eventLocation, eventDescription, eventDuration } =
+        req.body;
+      const filter = { id: id };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          eventName: eventName,
+          eventLocation: eventLocation,
+          eventDescription: eventDescription,
+          eventDuration: eventDuration,
+        },
+      };
+      const result = await eventCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
       res.send(result);
     });
 
