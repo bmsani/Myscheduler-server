@@ -118,7 +118,7 @@ async function run() {
 
     router.put("/updatedUser/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
-      const { name, message, mobile } = req.body;
+      const { name, message, mobile, imageURL } = req.body;
       const filter = { email: email };
       const options = { upsert: true };
       const updateDoc = {
@@ -126,6 +126,7 @@ async function run() {
           name: name,
           message: message,
           mobile: mobile,
+          imageURL: imageURL
         },
       };
       const result = await usersCollection.updateOne(
@@ -168,7 +169,7 @@ async function run() {
       const token = jwt.sign(
         { email: email },
         process.env.ACCESS_TOKEN_SECRET,
-        { expiresIn: "1d" }
+        { expiresIn: "7d" }
       );
       res.send({ result, token });
     });
