@@ -8,6 +8,7 @@ require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const createError = require("http-errors");
 const morgan = require("morgan");
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Middle ware
 app.use(cors());
@@ -47,8 +48,8 @@ async function run() {
       .db("MyScheduler")
       .collection("userAvailability");
     const blogsCollection = client.db("MyScheduler").collection("blogs");
-    const timeCollection = client.db("MyScheduler").collection("times");
     const eventCollection = client.db("MyScheduler").collection("event");
+    const paymentsCollection = client.db("MyScheduler").collection("payments");
 
     const verifyAdmin = async (req, res, next) => {
       const requester = req.decoded.email;
@@ -64,7 +65,7 @@ async function run() {
 
     // Admin ///////////////////////////////////////////////////////
     router.get("/user", verifyJWT, verifyAdmin, async (req, res) => {
-      const users = await (await usersCollection.find().toArray()).reverse();
+      const users = await (await usersCollection.find({}).toArray()).reverse();
       res.send(users);
     });
 
@@ -117,7 +118,7 @@ async function run() {
 
     router.put("/updatedUser/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
-      const { name, message, mobile } = req.body;
+      const { name, message, mobile, imageURL } = req.body;
       const filter = { email: email };
       const options = { upsert: true };
       const updateDoc = {
@@ -125,6 +126,7 @@ async function run() {
           name: name,
           message: message,
           mobile: mobile,
+          imageURL: imageURL
         },
       };
       const result = await usersCollection.updateOne(
@@ -167,7 +169,7 @@ async function run() {
       const token = jwt.sign(
         { email: email },
         process.env.ACCESS_TOKEN_SECRET,
-        { expiresIn: "1d" }
+        { expiresIn: "7d" }
       );
       res.send({ result, token });
     });
@@ -187,6 +189,34 @@ async function run() {
       );
       res.send(result);
     });
+
+    // Payment Section ////////////////////////////////////////////////////
+    router.post('/create-payment-intent', verifyJWT, async (req, res) => {
+      const { price } = req.body;
+      const amount = price * 100
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card']
+      })
+      res.send({ clientSecret: paymentIntent.client_secret })
+    })
+
+    router.patch('/user/:email', verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      console.log(filter);
+      const payment = req.body;
+      const updateDoc = {
+        $set: {
+          paymentStatus: true,
+          transactionId: payment.transactionId
+        },
+      }
+      const updatedPayment = await usersCollection.updateOne(filter, updateDoc);
+      res.send(updateDoc)
+
+    })
 
     // Blogs Section //////////////////////////////////////////////////////
 
@@ -358,7 +388,6 @@ async function run() {
         eventName: data.eventName,
         eventLocation: data.eventLocation,
         eventDescription: data.eventDescription,
-        // eventLink: data.eventLink,
         eventDuration: data.eventDuration,
         availabilities: data.availabilities,
       };
