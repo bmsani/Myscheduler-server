@@ -380,8 +380,6 @@ async function run() {
       res.send(result);
     });
 
-<<<<<<< HEAD
-=======
     router.post("/updateEvent", async (req, res) => {
       const data = req.body;
       const addDoc = {
@@ -396,7 +394,6 @@ async function run() {
       res.send(result);
     });
 
->>>>>>> f8553d42693699a66f5297962bec30514c05e8c3
     router.delete("/deleteEvent/:id", verifyJWT, async (req, res) => {
       const email = req.query.email;
       if (req.decoded.email !== email) {
