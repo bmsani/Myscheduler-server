@@ -19,6 +19,7 @@
     "googleapis": "^105.0.0",
     "jsonwebtoken": "^8.5.1",
     "mongodb": "^4.8.0",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "stripe": "^10.2.0"
   }
 }
