@@ -49,7 +49,6 @@ async function run() {
       .collection("userAvailability");
     const blogsCollection = client.db("MyScheduler").collection("blogs");
     const eventCollection = client.db("MyScheduler").collection("event");
-    const paymentsCollection = client.db("MyScheduler").collection("payments");
 
     const verifyAdmin = async (req, res, next) => {
       const requester = req.decoded.email;
@@ -307,7 +306,7 @@ async function run() {
       const find = await userAvailabilityCollection.findOne(filter);
       const dayId = req.params.dayId;
       const { newStart, newEnd } = req.body;
-      const dayData = find.dayData.find((d) => d.id === dayId);
+      const dayData = find?.dayData?.find((d) => d.id === dayId);
       // const { start, end } = dayData;
       if (dayData.start !== newStart && dayData.end !== newEnd) {
         (dayData.start = newStart), (dayData.end = newEnd);
