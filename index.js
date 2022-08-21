@@ -8,7 +8,7 @@ require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const createError = require("http-errors");
 const morgan = require("morgan");
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 // Middle ware
 app.use(cors());
@@ -125,7 +125,7 @@ async function run() {
           name: name,
           message: message,
           mobile: mobile,
-          imageURL: imageURL
+          imageURL: imageURL,
         },
       };
       const result = await usersCollection.updateOne(
@@ -190,18 +190,18 @@ async function run() {
     });
 
     // Payment Section ////////////////////////////////////////////////////
-    router.post('/create-payment-intent', verifyJWT, async (req, res) => {
+    router.post("/create-payment-intent", verifyJWT, async (req, res) => {
       const { price } = req.body;
-      const amount = price * 100
+      const amount = price * 100;
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
-        currency: 'usd',
-        payment_method_types: ['card']
-      })
-      res.send({ clientSecret: paymentIntent.client_secret })
-    })
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({ clientSecret: paymentIntent.client_secret });
+    });
 
-    router.patch('/user/:email', verifyJWT, async (req, res) => {
+    router.patch("/user/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       console.log(filter);
@@ -209,13 +209,12 @@ async function run() {
       const updateDoc = {
         $set: {
           paymentStatus: true,
-          transactionId: payment.transactionId
+          transactionId: payment.transactionId,
         },
-      }
+      };
       const updatedPayment = await usersCollection.updateOne(filter, updateDoc);
-      res.send(updateDoc)
-
-    })
+      res.send(updateDoc);
+    });
 
     // Blogs Section //////////////////////////////////////////////////////
 
@@ -362,9 +361,7 @@ async function run() {
     router.get("/getEvent/:email", async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
-      const result = await (
-        await eventCollection.find(filter).toArray()
-      ).reverse();
+      const result = await eventCollection.find(filter).toArray();
       res.send(result);
     });
 
