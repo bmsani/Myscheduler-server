@@ -8,6 +8,8 @@ require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const createError = require("http-errors");
 const morgan = require("morgan");
+const { resourcesettings } = require("googleapis/build/src/apis/resourcesettings");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 // Middle ware
 app.use(cors());
@@ -47,8 +49,8 @@ async function run() {
       .db("MyScheduler")
       .collection("userAvailability");
     const blogsCollection = client.db("MyScheduler").collection("blogs");
-    const timeCollection = client.db("MyScheduler").collection("times");
     const eventCollection = client.db("MyScheduler").collection("event");
+    const reviewCollection = client.db("MyScheduler").collection("reviews");
 
     const verifyAdmin = async (req, res, next) => {
       const requester = req.decoded.email;
@@ -64,7 +66,7 @@ async function run() {
 
     // Admin ///////////////////////////////////////////////////////
     router.get("/user", verifyJWT, verifyAdmin, async (req, res) => {
-      const users = await (await usersCollection.find().toArray()).reverse();
+      const users = await (await usersCollection.find({}).toArray()).reverse();
       res.send(users);
     });
 
@@ -111,13 +113,13 @@ async function run() {
     router.get("/admin/:email", async (req, res) => {
       const email = req.params.email;
       const user = await usersCollection.findOne({ email: email });
-      const isAdmin = user.role === "admin";
+      const isAdmin = user?.role === "admin";
       res.send({ admin: isAdmin });
     });
 
     router.put("/updatedUser/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
-      const { name, message, mobile } = req.body;
+      const { name, message, mobile, imageURL } = req.body;
       const filter = { email: email };
       const options = { upsert: true };
       const updateDoc = {
@@ -125,6 +127,7 @@ async function run() {
           name: name,
           message: message,
           mobile: mobile,
+          imageURL: imageURL,
         },
       };
       const result = await usersCollection.updateOne(
@@ -167,7 +170,7 @@ async function run() {
       const token = jwt.sign(
         { email: email },
         process.env.ACCESS_TOKEN_SECRET,
-        { expiresIn: "1d" }
+        { expiresIn: "7d" }
       );
       res.send({ result, token });
     });
@@ -187,6 +190,53 @@ async function run() {
       );
       res.send(result);
     });
+
+    // Payment Section ////////////////////////////////////////////////////
+    router.post("/create-payment-intent", verifyJWT, async (req, res) => {
+      const { price } = req.body;
+      const amount = price * 100;
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({ clientSecret: paymentIntent.client_secret });
+    });
+
+    router.patch("/user/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const payment = req.body;
+      const updateDoc = {
+        $set: {
+          paymentStatus: true,
+          transactionId: payment.transactionId,
+        },
+      };
+      const updatedPayment = await usersCollection.updateOne(filter, updateDoc);
+      res.send(updateDoc);
+    });
+
+
+    // User Review /////////////////////////////////////////////////////////
+    router.post('/review', verifyJWT, async (req, res) => {
+      const { name, image, position, review, rating } = req.body;
+      const reviewInfo = {
+        name: name,
+        position: position,
+        review: review,
+        rating: rating,
+        image: image
+      }
+      const result = await reviewCollection.insertOne(reviewInfo);
+      res.send(result)
+    })
+
+    router.get('/reviews', async (req, res) => {
+      const query = {};
+      const reviews = await (await reviewCollection.find(query).toArray()).reverse();
+      res.send(reviews)
+    })
 
     // Blogs Section //////////////////////////////////////////////////////
 
@@ -277,7 +327,7 @@ async function run() {
       const find = await userAvailabilityCollection.findOne(filter);
       const dayId = req.params.dayId;
       const { newStart, newEnd } = req.body;
-      const dayData = find.dayData.find((d) => d.id === dayId);
+      const dayData = find?.dayData?.find((d) => d.id === dayId);
       // const { start, end } = dayData;
       if (dayData.start !== newStart && dayData.end !== newEnd) {
         (dayData.start = newStart), (dayData.end = newEnd);
@@ -333,9 +383,7 @@ async function run() {
     router.get("/getEvent/:email", async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
-      const result = await (
-        await eventCollection.find(filter).toArray()
-      ).reverse();
+      const result = await eventCollection.find(filter).toArray();
       res.send(result);
     });
 
@@ -358,7 +406,6 @@ async function run() {
         eventName: data.eventName,
         eventLocation: data.eventLocation,
         eventDescription: data.eventDescription,
-        // eventLink: data.eventLink,
         eventDuration: data.eventDuration,
         availabilities: data.availabilities,
       };

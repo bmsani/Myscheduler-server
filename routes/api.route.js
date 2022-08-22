@@ -13,7 +13,6 @@ const GOOGLE_CLIENT_ID =
   "246190552758-iv4qnbua1chul41b87mfch0gsoeqe8bj.apps.googleusercontent.com";
 const GOOGLE_CLIENT_SECRET = "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";
 
-
 const oauth2Client = new google.auth.OAuth2(
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
@@ -27,6 +26,9 @@ async function run() {
 
   await client.connect();
   const usersCollection = client.db("MyScheduler").collection("users");
+  const bookingConfirmCollection = client
+    .db("MyScheduler")
+    .collection("bookingConfirm");
 
   router.post("/create-tokens", async (req, res, next) => {
     try {
@@ -66,10 +68,10 @@ async function run() {
           attendees: [{ email: email }],
           conferenceData: {
             createRequest: {
-                requestId: "sample123",
-                conferenceSolutionKey: { type: "hangoutsMeet" },
+              requestId: "sample123",
+              conferenceSolutionKey: { type: "hangoutsMeet" },
             },
-        },
+          },
         },
       });
       res.send(response);
@@ -77,8 +79,54 @@ async function run() {
       next(error);
     }
   });
+
+  // store confirm event in database
+  router.post("/createConfirmEvent", async (req, res, next) => {
+    try {
+      const {
+        eventName,
+        hostEmail,
+        inviteeName,
+        inviteeEmail,
+        inviteeMessage,
+        date,
+        eventStartTime,
+        eventEndTime,
+        eventLocation,
+      } = req.body;
+      const addDoc = {
+        eventName: eventName,
+        hostEmail: hostEmail,
+        inviteeName: inviteeName,
+        inviteeEmail: inviteeEmail,
+        inviteeMessage: inviteeMessage,
+        date: date,
+        eventStartTime: eventStartTime,
+        eventEndTime: eventEndTime,
+        eventLocation: eventLocation,
+      };
+      const result = await bookingConfirmCollection.insertOne(addDoc);
+      res.send(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // get user all booked events
+  router.get("/bookedEvents/:email", async (req, res, next) => {
+    const email = req.params.email;
+    const filter = { hostEmail: email };
+    const result = await bookingConfirmCollection.find(filter).toArray();
+    res.send(result);
+  });
+  // delete single booked events
+  router.delete("/bookedEventDelete/:id", async (req, res, next) => {
+    const id = req.params.id;
+    const filter = { _id: ObjectId(id) };
+    const result = await bookingConfirmCollection.deleteOne(filter);
+    res.send(result);
+  });
 }
 run().catch(console.dir);
-
 
 module.exports = router;
