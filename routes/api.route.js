@@ -105,7 +105,6 @@ async function run() {
         eventEndTime: eventEndTime,
         eventLocation: eventLocation,
       };
-      console.log(addDoc);
       const result = await bookingConfirmCollection.insertOne(addDoc);
       res.send(result);
     } catch (error) {
