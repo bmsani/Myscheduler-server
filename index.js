@@ -8,6 +8,7 @@ require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const createError = require("http-errors");
 const morgan = require("morgan");
+const { resourcesettings } = require("googleapis/build/src/apis/resourcesettings");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 // Middle ware
@@ -49,6 +50,7 @@ async function run() {
       .collection("userAvailability");
     const blogsCollection = client.db("MyScheduler").collection("blogs");
     const eventCollection = client.db("MyScheduler").collection("event");
+    const reviewCollection = client.db("MyScheduler").collection("reviews");
 
     const verifyAdmin = async (req, res, next) => {
       const requester = req.decoded.email;
@@ -204,7 +206,6 @@ async function run() {
     router.patch("/user/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
-      console.log(filter);
       const payment = req.body;
       const updateDoc = {
         $set: {
@@ -215,6 +216,27 @@ async function run() {
       const updatedPayment = await usersCollection.updateOne(filter, updateDoc);
       res.send(updateDoc);
     });
+
+
+    // User Review /////////////////////////////////////////////////////////
+    router.post('/review', verifyJWT, async (req, res) => {
+      const { name, image, position, review, rating } = req.body;
+      const reviewInfo = {
+        name: name,
+        position: position,
+        review: review,
+        rating: rating,
+        image: image
+      }
+      const result = await reviewCollection.insertOne(reviewInfo);
+      res.send(result)
+    })
+
+    router.get('/reviews', async (req, res) => {
+      const query = {};
+      const reviews = await (await reviewCollection.find(query).toArray()).reverse();
+      res.send(reviews)
+    })
 
     // Blogs Section //////////////////////////////////////////////////////
 
