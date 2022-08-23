@@ -1,6 +1,9 @@
 const router = require("express").Router();
 const { google } = require("googleapis");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+require("dotenv").config();
+const jwt = require("jsonwebtoken");
+
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.y46qz7a.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
@@ -40,18 +43,6 @@ async function run() {
   const bookingConfirmCollection = client
     .db("MyScheduler")
     .collection("bookingConfirm");
-
-  const verifyAdmin = async (req, res, next) => {
-    const requester = req.decoded.email;
-    const requesterAccount = await usersCollection.findOne({
-      email: requester,
-    });
-    if (requesterAccount.role === "admin") {
-      next();
-    } else {
-      res.status(403).send({ message: "forbidden access" });
-    }
-  };
 
   router.get("/", async (req, res, next) => {
     res.send({ message: "Ok api is working 🚀" });
@@ -139,7 +130,7 @@ async function run() {
     }
   });
 
-  // get user all booked events
+  // get a user booked events
   router.get("/bookedEvents/:email", verifyJWT, async (req, res) => {
     const email = req.params.email;
     const filter = { hostEmail: email };
@@ -154,7 +145,7 @@ async function run() {
     res.send(result);
   });
   // get all booked events
-  router.get("/allBookedEvents", verifyJWT, verifyAdmin, async (req, res) => {
+  router.get("/allBookedEvents", async (req, res) => {
     const result = await bookingConfirmCollection.find({}).toArray();
     res.send(result);
   });

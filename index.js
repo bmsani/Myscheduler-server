@@ -416,7 +416,7 @@ async function run() {
       res.send(result);
     });
 
-    router.get("/getAllEvent", verifyAdmin, async (req, res) => {
+    router.get("/getAllEvent", async (req, res) => {
       const result = (await eventCollection.find().toArray()).reverse();
       res.send(result);
     });
