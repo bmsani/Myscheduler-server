@@ -146,7 +146,7 @@ async function run() {
   });
   // get all booked events
   router.get("/allBookedEvents", async (req, res) => {
-    const result = await bookingConfirmCollection.find({}).toArray();
+    const result = await bookingConfirmCollection.find({}).toArray().reverse();
     res.send(result);
   });
 }
