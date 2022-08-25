@@ -8,7 +8,9 @@ require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const createError = require("http-errors");
 const morgan = require("morgan");
-const { resourcesettings } = require("googleapis/build/src/apis/resourcesettings");
+const {
+  resourcesettings,
+} = require("googleapis/build/src/apis/resourcesettings");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 // Middle ware
@@ -103,7 +105,7 @@ async function run() {
       res.send({ message: "test" });
     });
 
-    router.get("/user/:email", async (req, res) => {
+    router.get("/user/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       const user = await usersCollection.findOne(filter);
@@ -155,6 +157,7 @@ async function run() {
     });
 
     router.put("/user/:email", async (req, res) => {
+      console.log("refreshToken from user");
       const email = req.params.email;
       const user = req.body;
       const filter = { email: email };
@@ -177,11 +180,13 @@ async function run() {
 
     // store refresh token for google calendar access
     router.put("/refreshToken/:email", async (req, res) => {
+      console.log("refreshToken from refreashToken");
+      const email = req.params.email;
       const { refreshToken } = req.body;
       const filter = { email: email };
       const options = { upsert: true };
       const updatedDoc = {
-        $set: refreshToken,
+        $set: { refreshToken: refreshToken },
       };
       const result = await usersCollection.updateOne(
         filter,
@@ -217,26 +222,27 @@ async function run() {
       res.send(updateDoc);
     });
 
-
     // User Review /////////////////////////////////////////////////////////
-    router.post('/review', verifyJWT, async (req, res) => {
+    router.post("/review", verifyJWT, async (req, res) => {
       const { name, image, position, review, rating } = req.body;
       const reviewInfo = {
         name: name,
         position: position,
         review: review,
         rating: rating,
-        image: image
-      }
+        image: image,
+      };
       const result = await reviewCollection.insertOne(reviewInfo);
-      res.send(result)
-    })
+      res.send(result);
+    });
 
-    router.get('/reviews', async (req, res) => {
+    router.get("/reviews", async (req, res) => {
       const query = {};
-      const reviews = await (await reviewCollection.find(query).toArray()).reverse();
-      res.send(reviews)
-    })
+      const reviews = await (
+        await reviewCollection.find(query).toArray()
+      ).reverse();
+      res.send(reviews);
+    });
 
     // Blogs Section //////////////////////////////////////////////////////
 
@@ -256,7 +262,7 @@ async function run() {
 
     //  Availability Api section //////////////////////////////////////////////////
 
-    router.get("/availability/:email", async (req, res) => {
+    router.get("/availability/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       const result = await userAvailabilityCollection.findOne(filter);
@@ -380,11 +386,27 @@ async function run() {
     });
 
     // ////////////////// Create event APIS ////////////////////////////
-    router.get("/getEvent/:email", async (req, res) => {
+    router.get("/getEvent/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       const result = await eventCollection.find(filter).toArray();
       res.send(result);
+    });
+
+    // For invitee
+    router.get("/getUserEvents/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const result = await eventCollection.find(filter).toArray();
+      res.send(result);
+    });
+
+
+    router.get("/singleUser/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const user = await usersCollection.findOne(filter);
+      res.send(user);
     });
 
     router.get("/getSingleEvent/:id([0-9a-fA-F]{24})", async (req, res) => {
@@ -399,6 +421,7 @@ async function run() {
       res.send(result);
     });
 
+    // i can't find any client site call
     router.post("/updateEvent", async (req, res) => {
       const data = req.body;
       const addDoc = {
@@ -498,7 +521,7 @@ async function run() {
       res.send(find);
     });
 
-    router.post("/createNewEvent", async (req, res) => {
+    router.post("/createNewEvent", verifyJWT, async (req, res) => {
       const {
         email,
         eventName,
