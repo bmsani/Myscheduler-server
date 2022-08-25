@@ -17,6 +17,7 @@ const oauth2Client = new google.auth.OAuth2(
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
   "https://myscheduler-893bf.web.app"
+  // "http://localhost:3000"
 );
 
 async function run() {
