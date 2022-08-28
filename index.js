@@ -401,7 +401,6 @@ async function run() {
       res.send(result);
     });
 
-
     router.get("/singleUser/:email", async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
@@ -415,24 +414,10 @@ async function run() {
       const result = await eventCollection.findOne(filter);
       res.send(result);
     });
+    // For invitee end
 
-    router.get("/getAllEvent", async (req, res) => {
+    router.get("/getAllEvent", verifyJWT, async (req, res) => {
       const result = (await eventCollection.find().toArray()).reverse();
-      res.send(result);
-    });
-
-    // i can't find any client site call
-    router.post("/updateEvent", async (req, res) => {
-      const data = req.body;
-      const addDoc = {
-        email: data.email,
-        eventName: data.eventName,
-        eventLocation: data.eventLocation,
-        eventDescription: data.eventDescription,
-        eventDuration: data.eventDuration,
-        availabilities: data.availabilities,
-      };
-      const result = await eventCollection.insertOne(addDoc);
       res.send(result);
     });
 
